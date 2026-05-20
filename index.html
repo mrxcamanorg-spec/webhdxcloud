@@ -1,0 +1,446 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { 
+  Server, Shield, Zap, Headphones, Cpu, Database, 
+  Globe, ChevronDown, Check, Menu, X, ExternalLink, 
+  Layers, HardDrive, Activity, Clock 
+} from 'lucide-react';
+
+// --- Constants ---
+const DISCORD_LINK = "https://discord.gg/h5ys8SH2YX";
+const SUPPORT_EMAIL = "support@hdxcloud.qzz.io";
+const HELLO_EMAIL = "hello@hdxcloud.qzz.io";
+
+const REGIONS = [
+  { name: 'India', basePing: 30 },
+  { name: 'Singapore', basePing: 65 },
+  { name: 'Germany', basePing: 140 },
+  { name: 'Europe', basePing: 130 },
+  { name: 'US East', basePing: 220 },
+];
+
+// --- Sub-Components ---
+
+const GlassCard = ({ children, className = "" }) => (
+  <motion.div 
+    whileHover={{ y: -5 }}
+    className={`bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden ${className}`}
+  >
+    {children}
+  </motion.div>
+);
+
+const PricingCard = ({ plan, premium = false }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const mouseXSpring = useSpring(x);
+  const mouseYSpring = useSpring(y);
+  
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    x.set(mouseX / width - 0.5);
+    y.set(mouseY / height - 0.5);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <div style={{ perspective: "1200px" }} className="w-full">
+      <motion.div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        className={`relative group h-full w-full rounded-3xl border ${
+          premium 
+            ? "bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/30" 
+            : "bg-white/5 border-white/10"
+        } p-8 backdrop-blur-2xl transition-all duration-300`}
+      >
+        {/* Glow Effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl" />
+        
+        <div style={{ transform: "translateZ(50px)" }} className="relative z-10">
+          {plan.badge && (
+            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">
+              {plan.badge}
+            </span>
+          )}
+          <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+          <div className="flex items-baseline gap-2 mb-6">
+            <span className="text-4xl font-black text-white">{plan.price}</span>
+            {plan.oldPrice && <span className="text-gray-500 line-through text-sm">{plan.oldPrice}</span>}
+            <span className="text-gray-400 text-sm">/month</span>
+          </div>
+          
+          <ul className="space-y-3 mb-8">
+            {plan.features.map((f, i) => (
+              <li key={i} className="flex items-center gap-2 text-gray-300 text-sm">
+                <Check size={16} className="text-cyan-400" /> {f}
+              </li>
+            ))}
+          </ul>
+
+          <a 
+            href={DISCORD_LINK} 
+            target="_blank" 
+            rel="noreferrer"
+            className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] ${
+              premium ? "bg-cyan-500 text-black hover:bg-cyan-400" : "bg-white/10 text-white hover:bg-white/20"
+            }`}
+          >
+            Order via Discord <ExternalLink size={16} />
+          </a>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// --- Main App ---
+
+export default function App() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [pingResults, setPingResults] = useState(null);
+  const [isPinging, setIsPinging] = useState(false);
+
+  const startPingTest = () => {
+    setIsPinging(true);
+    setPingResults(null);
+    setTimeout(() => {
+      const results = REGIONS.map(r => ({
+        ...r,
+        ping: r.basePing + Math.floor(Math.random() * 15),
+      })).sort((a, b) => a.ping - b.ping);
+      setPingResults(results);
+      setIsPinging(false);
+    }, 2000);
+  };
+
+  const getQuality = (ms) => {
+    if (ms < 80) return { label: 'Excellent', color: 'text-green-400' };
+    if (ms < 150) return { label: 'Good', color: 'text-yellow-400' };
+    if (ms < 250) return { label: 'Average', color: 'text-orange-400' };
+    return { label: 'Poor', color: 'text-red-400' };
+  };
+
+  return (
+    <div className="min-h-screen bg-[#02040a] text-white selection:bg-cyan-500/30 font-sans overflow-x-hidden">
+      
+      {/* Background FX */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse" />
+      </div>
+
+      {/* Navbar */}
+      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-7xl z-50">
+        <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-2xl flex items-center justify-between">
+          <div className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
+            HDXCloud
+          </div>
+          
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+            {['Home', 'Features', 'Plans', 'Ping Test', 'FAQ'].map(item => (
+              <a key={item} href={`#${item.toLowerCase().replace(' ', '')}`} className="hover:text-white transition-colors uppercase tracking-widest text-[11px]">{item}</a>
+            ))}
+          </div>
+
+          <a href={DISCORD_LINK} className="bg-white text-black px-6 py-2 rounded-lg font-bold text-sm hover:scale-105 transition-transform">
+            Join Discord
+          </a>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-48 pb-32 px-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="inline-block px-4 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/5 text-cyan-400 text-xs font-bold uppercase tracking-[0.2em] mb-6"
+          >
+            The Future of Game Hosting
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-6xl md:text-8xl font-black mb-8 tracking-tighter leading-tight"
+          >
+            Next Generation <br/> 
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-500 to-purple-600">
+              Minecraft Hosting
+            </span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="text-gray-400 max-w-2xl text-lg md:text-xl mb-12 leading-relaxed"
+          >
+            Experience ultra-low latency, instant setup, and powerful enterprise hardware. Whether you need a free starter or a pro-grade server, HDXCloud delivers.
+          </motion.p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4"
+          >
+            <a href="#plans" className="px-10 py-5 bg-cyan-500 text-black font-black rounded-2xl shadow-[0_0_30px_rgba(34,211,238,0.4)] hover:bg-cyan-400 transition-all">
+              VIEW PLANS
+            </a>
+            <a href="#pingtest" className="px-10 py-5 bg-white/5 border border-white/10 font-black rounded-2xl hover:bg-white/10 transition-all backdrop-blur-lg">
+              TEST MY PING
+            </a>
+          </motion.div>
+        </div>
+
+        {/* Hero Visual Element */}
+        <div className="max-w-5xl mx-auto mt-24 relative">
+          <div className="absolute inset-0 bg-cyan-500/20 blur-[100px] rounded-full" />
+          <GlassCard className="aspect-video relative z-10 flex items-center justify-center">
+            <div className="grid grid-cols-3 gap-8 p-12 w-full">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-32 rounded-xl bg-white/5 border border-white/10 animate-pulse relative overflow-hidden">
+                   <div className="absolute top-2 left-2 flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                   </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* Live Stats */}
+      <section className="py-20 bg-white/[0.02] border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12">
+          {[
+            { label: 'Servers Online', val: '2,400+', icon: Server },
+            { label: 'Active Players', val: '12.5k', icon: Activity },
+            { label: 'Avg Ping', val: '24ms', icon: Clock },
+            { label: 'Support Rate', val: '99.9%', icon: Headphones },
+          ].map((stat, i) => (
+            <div key={i} className="text-center group">
+              <stat.icon className="mx-auto mb-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <div className="text-3xl font-black mb-1">{stat.val}</div>
+              <div className="text-gray-500 text-xs uppercase tracking-widest">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Ping Checker */}
+      <section id="pingtest" className="py-32 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-black mb-4 uppercase italic">Region Performance</h2>
+            <p className="text-gray-400 italic">Determine the lowest latency node for your exact location.</p>
+          </div>
+          
+          <GlassCard className="p-8 md:p-12">
+            {!pingResults && !isPinging && (
+              <div className="text-center py-10">
+                <div className="w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Globe className="text-cyan-400 animate-spin-slow" size={40} />
+                </div>
+                <button 
+                  onClick={startPingTest}
+                  className="bg-cyan-500 text-black px-12 py-4 rounded-xl font-black hover:bg-cyan-400 transition-all uppercase tracking-tighter"
+                >
+                  Start Latency Test
+                </button>
+              </div>
+            )}
+
+            {isPinging && (
+              <div className="text-center py-10">
+                <div className="relative w-24 h-24 mx-auto mb-8">
+                  <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+                <p className="text-cyan-400 font-mono tracking-widest uppercase">Pinging Global Nodes...</p>
+              </div>
+            )}
+
+            {pingResults && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {pingResults.map((res, i) => {
+                  const quality = getQuality(res.ping);
+                  return (
+                    <div key={i} className={`flex items-center justify-between p-6 rounded-2xl border ${i === 0 ? 'bg-cyan-500/10 border-cyan-500/50' : 'bg-white/5 border-white/10'}`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`w-3 h-3 rounded-full ${quality.color.replace('text', 'bg')} shadow-[0_0_10px_currentColor]`} />
+                        <div>
+                          <div className="font-bold text-lg">{res.name}</div>
+                          <div className={`text-xs font-bold uppercase ${quality.color}`}>{quality.label}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-black">{res.ping}ms</div>
+                        {i === 0 && <div className="text-[10px] text-cyan-400 font-black uppercase tracking-widest">Best Region</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+                <button onClick={() => setPingResults(null)} className="w-full py-4 text-gray-500 text-xs font-bold uppercase hover:text-white transition-colors mt-4">
+                  Run New Test
+                </button>
+              </div>
+            )}
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="plans" className="py-32 px-6 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-24">
+            <h2 className="text-5xl font-black mb-4 tracking-tighter italic">CHOOSE YOUR POWER</h2>
+            <p className="text-gray-400">Scale from basic projects to massive gaming networks.</p>
+          </div>
+
+          <div className="mb-24">
+             <div className="flex items-center gap-4 mb-12">
+               <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-white/10" />
+               <h3 className="text-xl font-bold uppercase tracking-[0.3em] text-gray-500">Free Tier</h3>
+               <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-white/10" />
+             </div>
+             <div className="max-w-md mx-auto">
+                <PricingCard plan={{
+                  name: "Free Starter",
+                  price: "₹0",
+                  features: ["1GB Dedicated RAM", "Shared CPU Thread", "5GB Storage", "Limited Slots", "Community Support"]
+                }} />
+             </div>
+          </div>
+
+          <div className="flex items-center gap-4 mb-12">
+            <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-cyan-500/20" />
+            <h3 className="text-xl font-bold uppercase tracking-[0.3em] text-cyan-400">Paid Premium Plans</h3>
+            <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-cyan-500/20" />
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              { name: "Lite", price: "₹49", oldPrice: "₹79", features: ["2GB RAM", "1 Core CPU", "10GB SSD", "1 Database", "DDoS Protection", "Free Subdomain"] },
+              { name: "Starter", price: "₹99", oldPrice: "₹149", features: ["4GB RAM", "2 Core CPU", "25GB SSD", "2 Databases", "DDoS Protection", "Daily Backups"] },
+              { name: "Pro", price: "₹149", oldPrice: "₹199", badge: "Best Value", features: ["8GB RAM", "4 Core CPU", "50GB NVMe SSD", "Unlimited Plugins", "Priority Support", "Modpack Support"] },
+              { name: "Ultra", price: "₹249", oldPrice: "₹299", features: ["12GB RAM", "6 Core CPU", "100GB NVMe SSD", "Dedicated Resources", "Advanced Backups", "Premium Security"] },
+              { name: "Max", price: "₹399", oldPrice: "₹499", features: ["16GB RAM", "8 Core CPU", "150GB NVMe SSD", "Maximum Performance", "Premium Support", "Full Mod Support"] },
+            ].map((p, i) => (
+              <PricingCard key={i} plan={p} premium={true} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section id="features" className="py-32 px-6 bg-white/[0.01]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { title: "One-Click Installs", desc: "Install hundreds of modpacks and plugins instantly from our dashboard.", icon: Zap },
+              { title: "NVMe Storage", desc: "Experience 10x faster loading speeds with premium Gen4 NVMe SSDs.", icon: HardDrive },
+              { title: "DDoS Protection", desc: "Enterprise-grade mitigation keeps your server online 24/7/365.", icon: Shield },
+              { title: "Global Nodes", desc: "Deploy servers in high-performance data centers across the globe.", icon: Globe },
+              { title: "Custom Panel", desc: "Control every aspect of your server with our intuitive web interface.", icon: Layers },
+              { title: "24/7 Support", desc: "Our experts are available on Discord around the clock to help.", icon: Headphones },
+            ].map((f, i) => (
+              <GlassCard key={i} className="p-8 group">
+                <f.icon className="text-cyan-400 mb-6 group-hover:scale-110 transition-transform duration-500" size={32} />
+                <h4 className="text-xl font-bold mb-4">{f.title}</h4>
+                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
+              </GlassCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-32 px-6">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-4xl font-black text-center mb-16 italic">FREQUENTLY ASKED</h2>
+          <div className="space-y-4">
+            {[
+              { q: "Do you offer free hosting?", a: "Yes! We offer a Free Starter plan with 1GB RAM to help you get started." },
+              { q: "How do I order a server?", a: "Simply click 'Order Now' on any plan. It will direct you to our Discord where our automated bot handles the setup." },
+              { q: "Is the setup instant?", a: "Yes! Once the order is confirmed in Discord, your server is deployed automatically within seconds." },
+              { q: "Can I upgrade my plan later?", a: "Absolutely. You can scale your resources through our Discord tickets without losing any data." }
+            ].map((item, i) => (
+              <details key={i} className="group bg-white/5 rounded-2xl border border-white/10 p-6 cursor-pointer">
+                <summary className="flex justify-between items-center font-bold list-none">
+                  {item.q}
+                  <ChevronDown className="group-open:rotate-180 transition-transform text-cyan-400" />
+                </summary>
+                <p className="mt-4 text-gray-400 text-sm">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-32 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-[3rem] border border-cyan-500/30 p-12 md:p-24 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+            <h2 className="text-5xl md:text-7xl font-black mb-8 relative z-10 italic">READY TO LAUNCH?</h2>
+            <p className="text-gray-300 text-lg mb-12 max-w-xl mx-auto relative z-10">
+              Join thousands of players already hosting with HDXCloud. Premium support and top-tier hardware await you.
+            </p>
+            <div className="flex flex-wrap justify-center gap-6 relative z-10">
+              <a href={DISCORD_LINK} className="bg-white text-black px-12 py-5 rounded-2xl font-black hover:scale-105 transition-transform">
+                JOIN DISCORD
+              </a>
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="bg-cyan-500/10 border border-cyan-500/50 text-white px-12 py-5 rounded-2xl font-black hover:bg-cyan-500/20 transition-all">
+                EMAIL SUPPORT
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-12">
+          <div>
+            <div className="text-3xl font-black text-white mb-4">HDXCloud</div>
+            <p className="text-gray-500 text-sm max-w-xs">Premium game hosting solutions for the modern era.</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-12">
+            <div>
+              <h5 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-6">Contact</h5>
+              <div className="space-y-3 text-sm text-gray-500">
+                <p className="hover:text-cyan-400 cursor-pointer">{SUPPORT_EMAIL}</p>
+                <p className="hover:text-cyan-400 cursor-pointer">{HELLO_EMAIL}</p>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-6">Legal</h5>
+              <div className="space-y-3 text-sm text-gray-500">
+                <p className="hover:text-white cursor-pointer">Terms of Service</p>
+                <p className="hover:text-white cursor-pointer">Privacy Policy</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+            Owned by: HDX_1.0 • HDX_2.0 • HDX_3.0
+          </p>
+          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+            &copy; {new Date().getFullYear()} HDXCloud. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}

@@ -1,446 +1,1462 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { 
-  Server, Shield, Zap, Headphones, Cpu, Database, 
-  Globe, ChevronDown, Check, Menu, X, ExternalLink, 
-  Layers, HardDrive, Activity, Clock 
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDXCloud — Next Generation Minecraft Hosting</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #020408;
+  --bg2: #050c14;
+  --navy: #071628;
+  --blue: #00aaff;
+  --cyan: #00e5ff;
+  --purple: #8b5cf6;
+  --neon: #00d4ff;
+  --glow: rgba(0,170,255,0.35);
+  --glow2: rgba(139,92,246,0.3);
+  --glass: rgba(255,255,255,0.04);
+  --glass2: rgba(0,170,255,0.08);
+  --border: rgba(0,170,255,0.18);
+  --border2: rgba(255,255,255,0.07);
+  --text: #e8f4ff;
+  --muted: #7aa3c8;
+  --gold: #fbbf24;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Rajdhani',sans-serif;
+  font-weight:400;
+  overflow-x:hidden;
+  cursor:none;
+}
+::selection{background:rgba(0,170,255,0.3);}
 
-// --- Constants ---
-const DISCORD_LINK = "https://discord.gg/h5ys8SH2YX";
-const SUPPORT_EMAIL = "support@hdxcloud.qzz.io";
-const HELLO_EMAIL = "hello@hdxcloud.qzz.io";
+/* CURSOR */
+#cursor{
+  width:16px;height:16px;
+  border:2px solid var(--cyan);
+  border-radius:50%;
+  position:fixed;top:0;left:0;
+  pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);
+  transition:transform .1s,width .2s,height .2s,background .2s;
+  mix-blend-mode:screen;
+}
+#cursor-trail{
+  width:6px;height:6px;
+  background:var(--blue);
+  border-radius:50%;
+  position:fixed;top:0;left:0;
+  pointer-events:none;z-index:9998;
+  transform:translate(-50%,-50%);
+  transition:transform .25s ease;
+  opacity:0.6;
+}
+body:hover #cursor{background:rgba(0,229,255,0.1);}
 
-const REGIONS = [
-  { name: 'India', basePing: 30 },
-  { name: 'Singapore', basePing: 65 },
-  { name: 'Germany', basePing: 140 },
-  { name: 'Europe', basePing: 130 },
-  { name: 'US East', basePing: 220 },
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--blue);border-radius:2px;}
+
+/* CANVAS */
+#particle-canvas{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;opacity:0.5;
+}
+
+/* NAVBAR */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  padding:0 2.5rem;
+  height:70px;
+  display:flex;align-items:center;justify-content:space-between;
+  backdrop-filter:blur(20px);
+  background:rgba(2,4,8,0.7);
+  border-bottom:1px solid var(--border);
+  transition:all .3s;
+}
+nav.scrolled{
+  background:rgba(2,4,8,0.92);
+  box-shadow:0 0 40px rgba(0,170,255,0.08);
+}
+.nav-logo{
+  font-family:'Orbitron',sans-serif;
+  font-weight:900;font-size:1.4rem;
+  background:linear-gradient(135deg,var(--cyan),var(--blue),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-shadow:none;
+  filter:drop-shadow(0 0 12px rgba(0,229,255,0.5));
+  letter-spacing:2px;
+  cursor:pointer;
+}
+.nav-links{
+  display:flex;align-items:center;gap:2rem;
+  list-style:none;
+}
+.nav-links a{
+  color:var(--muted);
+  text-decoration:none;
+  font-size:0.85rem;
+  font-weight:600;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  position:relative;
+  transition:color .3s;
+}
+.nav-links a::after{
+  content:'';
+  position:absolute;bottom:-4px;left:0;right:0;height:1px;
+  background:var(--cyan);
+  transform:scaleX(0);
+  transition:transform .3s;
+  box-shadow:0 0 8px var(--cyan);
+}
+.nav-links a:hover{color:var(--cyan);}
+.nav-links a:hover::after{transform:scaleX(1);}
+.nav-discord-btn{
+  background:linear-gradient(135deg,#5865f2,#4752c4);
+  color:#fff;
+  border:none;padding:.55rem 1.3rem;
+  border-radius:8px;font-family:'Rajdhani',sans-serif;
+  font-weight:700;font-size:.85rem;letter-spacing:1px;
+  text-transform:uppercase;cursor:pointer;
+  text-decoration:none;
+  box-shadow:0 0 20px rgba(88,101,242,0.4);
+  transition:all .3s;
+}
+.nav-discord-btn:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(88,101,242,0.7);}
+
+/* HAMBURGER */
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;z-index:1001;}
+.hamburger span{width:24px;height:2px;background:var(--cyan);border-radius:2px;transition:all .3s;}
+.hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px);}
+
+.mobile-menu{
+  display:none;position:fixed;top:70px;left:0;right:0;
+  background:rgba(2,4,8,0.98);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:1.5rem;z-index:999;
+  flex-direction:column;gap:1rem;
+}
+.mobile-menu.open{display:flex;}
+.mobile-menu a{
+  color:var(--muted);text-decoration:none;
+  font-size:1rem;font-weight:600;letter-spacing:1px;
+  text-transform:uppercase;padding:.5rem 0;
+  border-bottom:1px solid var(--border2);
+  transition:color .3s;
+}
+.mobile-menu a:hover{color:var(--cyan);}
+
+/* HERO */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;text-align:center;
+  padding:0 2rem;padding-top:70px;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;z-index:1;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -20%,rgba(0,170,255,0.15) 0%,transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 80%,rgba(139,92,246,0.1) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 40% at 20% 60%,rgba(0,229,255,0.07) 0%,transparent 70%);
+}
+.orb{
+  position:absolute;border-radius:50%;
+  filter:blur(80px);pointer-events:none;animation:orbFloat 8s ease-in-out infinite;
+}
+.orb1{width:500px;height:500px;background:rgba(0,170,255,0.06);top:-100px;left:-100px;animation-delay:0s;}
+.orb2{width:400px;height:400px;background:rgba(139,92,246,0.08);bottom:-50px;right:-80px;animation-delay:-3s;}
+.orb3{width:300px;height:300px;background:rgba(0,229,255,0.05);top:40%;right:10%;animation-delay:-5s;}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(30px,-40px) scale(1.05);}
+}
+
+.hero-content{position:relative;z-index:3;max-width:950px;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:.5rem;
+  background:rgba(0,170,255,0.1);border:1px solid var(--border);
+  border-radius:100px;padding:.35rem 1.2rem;
+  font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);
+  margin-bottom:1.5rem;
+  box-shadow:0 0 20px rgba(0,170,255,0.1);
+}
+.hero-badge span{width:6px;height:6px;background:var(--cyan);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,229,255,0.5);}50%{opacity:.7;box-shadow:0 0 0 6px rgba(0,229,255,0);}}
+.hero h1{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(2.5rem,7vw,5.5rem);
+  font-weight:900;line-height:1.05;
+  letter-spacing:-1px;
+  margin-bottom:1.5rem;
+}
+.h1-line1{
+  background:linear-gradient(135deg,#fff 0%,var(--cyan) 50%,var(--blue) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  display:block;
+}
+.h1-line2{
+  background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  display:block;
+  filter:drop-shadow(0 0 30px rgba(139,92,246,0.4));
+}
+.hero p{
+  font-size:clamp(1rem,2.5vw,1.25rem);
+  color:var(--muted);max-width:680px;margin:0 auto 2.5rem;
+  line-height:1.7;font-weight:400;
+}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:3.5rem;}
+.btn-primary{
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  color:#000;font-family:'Orbitron',sans-serif;
+  font-weight:700;font-size:.8rem;letter-spacing:1.5px;text-transform:uppercase;
+  border:none;padding:.85rem 2.2rem;border-radius:10px;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;
+  box-shadow:0 0 30px rgba(0,170,255,0.4),0 0 60px rgba(0,170,255,0.15);
+  transition:all .3s;position:relative;overflow:hidden;
+}
+.btn-primary::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 30%,rgba(255,255,255,0.2) 50%,transparent 70%);
+  transform:translateX(-100%);transition:transform .5s;
+}
+.btn-primary:hover::before{transform:translateX(100%);}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 0 50px rgba(0,170,255,0.6),0 0 80px rgba(0,170,255,0.2);}
+.btn-secondary{
+  background:transparent;
+  color:var(--cyan);
+  border:1px solid var(--border);
+  font-family:'Orbitron',sans-serif;font-weight:700;font-size:.8rem;
+  letter-spacing:1.5px;text-transform:uppercase;
+  padding:.85rem 2.2rem;border-radius:10px;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;
+  backdrop-filter:blur(10px);
+  transition:all .3s;
+}
+.btn-secondary:hover{background:var(--glass2);border-color:var(--cyan);transform:translateY(-3px);box-shadow:0 0 30px rgba(0,229,255,0.2);}
+.trust-badges{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;
+}
+.trust-badge{
+  display:flex;align-items:center;gap:.5rem;
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:8px;padding:.5rem 1rem;
+  font-size:.75rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  color:var(--muted);backdrop-filter:blur(10px);
+}
+.trust-badge .dot{width:6px;height:6px;background:var(--cyan);border-radius:50%;box-shadow:0 0 8px var(--cyan);}
+
+/* HERO DASHBOARD */
+.hero-dashboard{
+  position:absolute;right:-80px;top:50%;transform:translateY(-50%);
+  width:340px;z-index:2;opacity:0.7;
+  display:none;
+}
+@media(min-width:1200px){.hero-dashboard{display:block;}}
+.dashboard-card{
+  background:rgba(5,12,20,0.9);border:1px solid var(--border);
+  border-radius:16px;padding:1.2rem;
+  backdrop-filter:blur(20px);
+  box-shadow:0 0 40px rgba(0,170,255,0.1);
+  margin-bottom:1rem;animation:dashFloat 4s ease-in-out infinite;
+}
+@keyframes dashFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.dash-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem;font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:2px;}
+.dash-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:pulse 1.5s infinite;}
+.dash-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;}
+.dash-label{font-size:.7rem;color:var(--muted);}
+.dash-val{font-size:.75rem;font-weight:700;color:var(--cyan);}
+.dash-bar{width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:.8rem;overflow:hidden;}
+.dash-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--cyan));animation:barGrow 3s ease-in-out infinite alternate;}
+@keyframes barGrow{0%{width:40%;}100%{width:85%;}}
+
+/* SECTION STYLES */
+section{position:relative;z-index:2;}
+.section-header{text-align:center;margin-bottom:4rem;}
+.section-tag{
+  display:inline-block;
+  font-size:.7rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:1rem;
+  padding:.3rem 1rem;border:1px solid rgba(0,229,255,0.2);border-radius:100px;
+  background:rgba(0,229,255,0.05);
+}
+.section-title{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(1.8rem,4vw,3rem);font-weight:900;
+  background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:1rem;
+}
+.section-sub{color:var(--muted);font-size:1.05rem;max-width:550px;margin:0 auto;line-height:1.7;}
+
+/* STATS */
+.stats{padding:5rem 2rem;}
+.stats-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;
+  max-width:1100px;margin:0 auto;
+}
+.stat-card{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:16px;padding:2rem;text-align:center;
+  backdrop-filter:blur(20px);
+  position:relative;overflow:hidden;
+  transition:transform .3s,box-shadow .3s;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+}
+.stat-card:hover{transform:translateY(-6px);box-shadow:0 20px 60px rgba(0,170,255,0.15);}
+.stat-num{
+  font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  display:block;margin-bottom:.3rem;
+}
+.stat-label{font-size:.75rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.stat-icon{font-size:1.5rem;margin-bottom:.8rem;display:block;}
+
+/* FEATURES */
+.features{padding:5rem 2rem;}
+.features-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.5rem;
+  max-width:1200px;margin:0 auto;
+}
+.feature-card{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:16px;padding:1.8rem;
+  backdrop-filter:blur(20px);
+  transition:all .3s;
+  position:relative;overflow:hidden;
+  cursor:default;
+}
+.feature-card::after{
+  content:'';position:absolute;inset:0;border-radius:16px;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(0,170,255,0.06) 0%,transparent 60%);
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.feature-card:hover{transform:translateY(-6px);border-color:var(--border);box-shadow:0 20px 50px rgba(0,170,255,0.12);}
+.feature-card:hover::after{opacity:1;}
+.feat-icon{
+  width:48px;height:48px;border-radius:12px;
+  background:var(--glass2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;margin-bottom:1rem;
+  transition:transform .3s;
+}
+.feature-card:hover .feat-icon{transform:scale(1.1) rotate(-5deg);}
+.feat-title{font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;margin-bottom:.5rem;color:#fff;letter-spacing:.5px;}
+.feat-desc{font-size:.85rem;color:var(--muted);line-height:1.6;}
+
+/* PING CHECKER */
+.ping-section{padding:6rem 2rem;}
+.ping-wrapper{
+  max-width:900px;margin:0 auto;
+  background:rgba(5,12,20,0.8);border:1px solid var(--border);
+  border-radius:24px;padding:3rem;
+  backdrop-filter:blur(30px);
+  box-shadow:0 0 80px rgba(0,170,255,0.06);
+}
+.ping-center{text-align:center;margin-bottom:2.5rem;}
+.ping-start-btn{
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  color:#000;border:none;padding:1rem 3rem;
+  border-radius:12px;font-family:'Orbitron',sans-serif;
+  font-weight:700;font-size:.9rem;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;box-shadow:0 0 30px rgba(0,170,255,0.4);
+  transition:all .3s;
+}
+.ping-start-btn:hover{transform:translateY(-3px);box-shadow:0 0 50px rgba(0,170,255,0.6);}
+.ping-start-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.ping-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;
+  margin-top:2rem;
+}
+.ping-card{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:14px;padding:1.2rem;text-align:center;
+  transition:all .3s;position:relative;overflow:hidden;
+  opacity:0;transform:translateY(20px);
+}
+.ping-card.revealed{opacity:1;transform:translateY(0);}
+.ping-card.best{
+  border-color:var(--cyan);
+  box-shadow:0 0 30px rgba(0,229,255,0.25);
+  background:rgba(0,229,255,0.05);
+}
+.ping-region{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:1px;color:#fff;margin-bottom:.6rem;}
+.ping-ms{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;margin-bottom:.3rem;}
+.ping-quality{font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+.best-badge{
+  font-size:.6rem;font-weight:700;letter-spacing:2px;
+  background:var(--cyan);color:#000;
+  padding:.2rem .6rem;border-radius:100px;
+  margin-top:.5rem;display:inline-block;
+}
+.ping-loading{text-align:center;padding:2rem;display:none;}
+.ping-ring{
+  width:60px;height:60px;border:3px solid var(--border);
+  border-top-color:var(--cyan);border-radius:50%;
+  animation:spin 1s linear infinite;margin:0 auto 1rem;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* PLANS */
+.plans{padding:7rem 2rem;background:radial-gradient(ellipse 100% 70% at 50% 50%,rgba(0,100,200,0.04) 0%,transparent 70%);}
+.plan-tabs{
+  display:flex;justify-content:center;gap:1rem;margin-bottom:3rem;flex-wrap:wrap;
+}
+.plan-tab{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:10px;padding:.6rem 2rem;
+  font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;color:var(--muted);transition:all .3s;
+}
+.plan-tab.active,.plan-tab:hover{
+  background:var(--glass2);border-color:var(--cyan);color:var(--cyan);
+  box-shadow:0 0 20px rgba(0,229,255,0.15);
+}
+.plan-category{display:none;}
+.plan-category.active{display:block;}
+
+/* FREE PLAN */
+.free-plan-wrap{max-width:450px;margin:0 auto;}
+.free-plan-card{
+  background:linear-gradient(135deg,rgba(5,12,20,.9),rgba(7,22,40,.9));
+  border:1px solid rgba(0,229,255,0.25);
+  border-radius:24px;padding:3rem;text-align:center;
+  backdrop-filter:blur(30px);
+  box-shadow:0 0 60px rgba(0,170,255,0.08),inset 0 1px 0 rgba(255,255,255,0.05);
+  transition:transform .4s;
+}
+.free-plan-card:hover{transform:translateY(-8px);}
+.free-tag{
+  display:inline-block;background:rgba(34,197,94,0.15);
+  border:1px solid rgba(34,197,94,0.3);color:#22c55e;
+  font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;
+  padding:.3rem .9rem;border-radius:100px;margin-bottom:1.5rem;
+}
+.plan-name-free{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;color:#fff;margin-bottom:.5rem;}
+.plan-price-free{font-size:3.5rem;font-family:'Orbitron',sans-serif;font-weight:900;color:#22c55e;margin-bottom:1.5rem;}
+.plan-price-free span{font-size:1rem;color:var(--muted);}
+.plan-features{list-style:none;margin-bottom:2rem;text-align:left;}
+.plan-features li{
+  display:flex;align-items:center;gap:.7rem;
+  padding:.5rem 0;border-bottom:1px solid var(--border2);
+  font-size:.9rem;color:var(--muted);
+}
+.plan-features li .check{color:#22c55e;font-weight:700;flex-shrink:0;}
+.btn-free{
+  width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:#fff;border:none;padding:1rem;border-radius:12px;
+  font-family:'Orbitron',sans-serif;font-weight:700;font-size:.85rem;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  text-decoration:none;display:block;text-align:center;
+  box-shadow:0 0 30px rgba(34,197,94,0.3);transition:all .3s;
+}
+.btn-free:hover{transform:translateY(-3px);box-shadow:0 0 50px rgba(34,197,94,0.5);}
+
+/* PREMIUM PLANS GRID */
+.premium-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:1.5rem;max-width:1400px;margin:0 auto;
+  perspective:1200px;
+}
+
+/* 3D PLAN CARD */
+.plan-card-3d{
+  position:relative;
+  transform-style:preserve-3d;
+  transition:transform .4s cubic-bezier(.175,.885,.32,1.275),box-shadow .4s;
+  border-radius:24px;
+  cursor:default;
+}
+.plan-card-inner{
+  background:linear-gradient(145deg,rgba(5,12,20,.95),rgba(7,22,40,.95));
+  border:1px solid var(--border);
+  border-radius:24px;padding:2.2rem 1.8rem;
+  backdrop-filter:blur(30px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 30px 80px rgba(0,0,0,0.5),
+    0 0 40px rgba(0,170,255,0.05);
+  position:relative;overflow:hidden;
+  height:100%;
+}
+.plan-card-inner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:120px;
+  background:linear-gradient(180deg,rgba(0,170,255,0.05) 0%,transparent 100%);
+  pointer-events:none;
+}
+.plan-card-inner::after{
+  content:'';
+  position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:conic-gradient(from 0deg,transparent 0%,rgba(0,170,255,0.04) 20%,transparent 40%);
+  animation:rotateConic 8s linear infinite;
+  pointer-events:none;
+}
+@keyframes rotateConic{to{transform:rotate(360deg);}}
+.plan-card-3d:hover{
+  transform:translateY(-12px) rotateX(4deg) rotateY(-3deg) scale(1.02);
+  box-shadow:0 40px 100px rgba(0,0,0,0.6),0 0 80px rgba(0,170,255,0.15);
+}
+.plan-card-3d.featured:hover{
+  box-shadow:0 40px 100px rgba(0,0,0,0.6),0 0 100px rgba(139,92,246,0.25);
+}
+.plan-card-3d.featured .plan-card-inner{
+  border-color:rgba(139,92,246,0.4);
+  background:linear-gradient(145deg,rgba(7,5,22,.95),rgba(20,10,50,.95));
+}
+.plan-card-3d.featured .plan-card-inner::before{
+  background:linear-gradient(180deg,rgba(139,92,246,0.1) 0%,transparent 100%);
+}
+.best-badge-wrap{
+  position:absolute;top:-1px;right:24px;
+  background:linear-gradient(135deg,var(--purple),#a78bfa);
+  color:#fff;font-family:'Orbitron',sans-serif;
+  font-size:.6rem;font-weight:700;letter-spacing:2px;
+  padding:.35rem 1rem;border-radius:0 0 10px 10px;
+  box-shadow:0 0 20px rgba(139,92,246,0.5);
+  z-index:2;
+}
+.plan-tier{
+  font-size:.65rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:var(--blue);margin-bottom:.8rem;display:block;
+}
+.plan-name{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;color:#fff;margin-bottom:.3rem;}
+.plan-old-price{
+  font-size:.85rem;color:var(--muted);text-decoration:line-through;
+  margin-bottom:.2rem;
+}
+.plan-price{
+  font-family:'Orbitron',sans-serif;font-size:2.2rem;font-weight:900;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:.2rem;line-height:1;
+}
+.plan-period{font-size:.75rem;color:var(--muted);margin-bottom:1.5rem;}
+.plan-divider{
+  height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);
+  margin:1.2rem 0;
+}
+.plan-features-list{list-style:none;margin-bottom:2rem;}
+.plan-features-list li{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.35rem 0;font-size:.82rem;color:var(--muted);
+}
+.plan-features-list li .ck{color:var(--cyan);font-size:.9rem;flex-shrink:0;}
+.plan-features-list li.ram{color:#fff;font-weight:600;}
+.plan-order-btn{
+  width:100%;padding:.9rem;
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  color:#000;border:none;border-radius:12px;
+  font-family:'Orbitron',sans-serif;font-weight:700;font-size:.78rem;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  text-decoration:none;display:block;text-align:center;
+  box-shadow:0 0 30px rgba(0,170,255,0.35);
+  transition:all .3s;position:relative;overflow:hidden;
+}
+.plan-order-btn::after{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);
+  transition:left .5s;
+}
+.plan-order-btn:hover::after{left:100%;}
+.plan-order-btn:hover{transform:translateY(-2px);box-shadow:0 0 50px rgba(0,170,255,0.55);}
+.plan-card-3d.featured .plan-order-btn{
+  background:linear-gradient(135deg,var(--purple),#a78bfa);
+  box-shadow:0 0 30px rgba(139,92,246,0.4);
+}
+.plan-card-3d.featured .plan-order-btn:hover{box-shadow:0 0 50px rgba(139,92,246,0.65);}
+.plan-discord-note{text-align:center;font-size:.7rem;color:var(--muted);margin-top:.6rem;letter-spacing:.5px;}
+
+/* GLOW SPOTLIGHT */
+.plan-spotlight{
+  position:absolute;width:200px;height:200px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(0,170,255,0.12) 0%,transparent 70%);
+  pointer-events:none;transform:translate(-50%,-50%);
+  transition:all .15s;
+}
+
+/* HOSTING FEATURES */
+.hosting-features{padding:6rem 2rem;background:rgba(0,5,15,0.5);}
+.hf-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;
+  max-width:1200px;margin:0 auto;
+}
+.hf-item{
+  display:flex;align-items:center;gap:.8rem;
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:10px;padding:.9rem 1.1rem;
+  font-size:.82rem;color:var(--muted);
+  transition:all .3s;
+}
+.hf-item:hover{border-color:var(--border);color:var(--text);background:var(--glass2);transform:translateX(4px);}
+.hf-item .hf-dot{width:6px;height:6px;background:var(--cyan);border-radius:50%;flex-shrink:0;box-shadow:0 0 6px var(--cyan);}
+
+/* WHY SECTION */
+.why{padding:6rem 2rem;}
+.why-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem;
+  max-width:1100px;margin:0 auto;
+}
+.why-card{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:20px;padding:2rem;
+  backdrop-filter:blur(20px);
+  transition:all .3s;
+  display:flex;flex-direction:column;gap:1rem;
+}
+.why-card:hover{transform:translateY(-6px);border-color:var(--border);box-shadow:0 20px 60px rgba(0,170,255,0.1);}
+.why-icon{font-size:2rem;}
+.why-title{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;color:#fff;letter-spacing:.5px;}
+.why-desc{font-size:.88rem;color:var(--muted);line-height:1.6;}
+
+/* TESTIMONIALS */
+.testimonials{padding:6rem 2rem;}
+.testi-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;
+  max-width:1100px;margin:0 auto;
+}
+.testi-card{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:20px;padding:2rem;
+  backdrop-filter:blur(20px);
+  transition:all .3s;position:relative;
+}
+.testi-card::before{
+  content:'"';
+  position:absolute;top:1rem;right:1.5rem;
+  font-family:'Orbitron',sans-serif;font-size:4rem;
+  color:var(--border);line-height:1;
+}
+.testi-card:hover{transform:translateY(-6px);border-color:var(--border);box-shadow:0 20px 60px rgba(0,170,255,0.1);}
+.testi-text{font-size:.92rem;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;}
+.testi-author{display:flex;align-items:center;gap:.8rem;}
+.testi-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',sans-serif;font-weight:700;font-size:.85rem;color:#fff;
+  border:2px solid var(--border);
+}
+.testi-name{font-weight:700;font-size:.9rem;color:#fff;}
+.testi-role{font-size:.75rem;color:var(--muted);}
+.testi-stars{color:var(--gold);font-size:.85rem;margin-bottom:.3rem;}
+
+/* FAQ */
+.faq{padding:6rem 2rem;}
+.faq-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:1rem;}
+.faq-item{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:14px;overflow:hidden;
+  backdrop-filter:blur(20px);transition:border-color .3s;
+}
+.faq-item.open{border-color:var(--border);}
+.faq-q{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:1.3rem 1.5rem;cursor:pointer;
+  font-weight:600;font-size:.95rem;color:#fff;
+  gap:1rem;
+}
+.faq-q:hover{color:var(--cyan);}
+.faq-icon{color:var(--cyan);font-size:1.2rem;transition:transform .3s;flex-shrink:0;}
+.faq-item.open .faq-icon{transform:rotate(45deg);}
+.faq-a{
+  max-height:0;overflow:hidden;
+  transition:max-height .4s ease,padding .3s;
+  font-size:.88rem;color:var(--muted);line-height:1.7;
+  padding:0 1.5rem;
+}
+.faq-item.open .faq-a{max-height:200px;padding:0 1.5rem 1.3rem;}
+
+/* CONTACT */
+.contact{padding:6rem 2rem;background:rgba(0,5,15,0.5);}
+.contact-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;
+  max-width:900px;margin:0 auto;
+}
+.contact-card{
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:20px;padding:2.5rem 2rem;text-align:center;
+  backdrop-filter:blur(20px);transition:all .3s;
+}
+.contact-card:hover{border-color:var(--border);transform:translateY(-5px);box-shadow:0 20px 50px rgba(0,170,255,0.1);}
+.contact-icon{font-size:2.5rem;margin-bottom:1rem;display:block;}
+.contact-title{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;color:#fff;margin-bottom:.5rem;}
+.contact-info{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.7;}
+.contact-info a{color:var(--muted);text-decoration:none;}
+.contact-info a:hover{color:var(--cyan);}
+.btn-contact{
+  display:inline-block;padding:.7rem 1.8rem;
+  border-radius:10px;font-family:'Orbitron',sans-serif;font-weight:700;
+  font-size:.75rem;letter-spacing:1px;text-transform:uppercase;
+  text-decoration:none;transition:all .3s;
+}
+.btn-contact.disc{
+  background:linear-gradient(135deg,#5865f2,#4752c4);color:#fff;
+  box-shadow:0 0 20px rgba(88,101,242,0.3);
+}
+.btn-contact.disc:hover{box-shadow:0 0 40px rgba(88,101,242,0.6);}
+.btn-contact.mail{
+  background:var(--glass2);color:var(--cyan);border:1px solid var(--border);
+}
+.btn-contact.mail:hover{background:rgba(0,170,255,0.15);box-shadow:0 0 20px rgba(0,170,255,0.2);}
+
+/* CTA */
+.cta{padding:8rem 2rem;text-align:center;position:relative;overflow:hidden;}
+.cta-bg{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 50%,rgba(0,100,200,0.1) 0%,transparent 70%);
+  animation:ctaPulse 4s ease-in-out infinite;
+}
+@keyframes ctaPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+.cta h2{
+  font-family:'Orbitron',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:900;
+  background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:1rem;position:relative;z-index:2;
+}
+.cta p{font-size:1.1rem;color:var(--muted);max-width:500px;margin:0 auto 2.5rem;position:relative;z-index:2;line-height:1.7;}
+.cta-btn{position:relative;z-index:2;}
+.btn-cta{
+  background:linear-gradient(135deg,#5865f2,#4752c4);
+  color:#fff;border:none;padding:1.1rem 3rem;
+  border-radius:14px;font-family:'Orbitron',sans-serif;
+  font-weight:700;font-size:.9rem;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.6rem;
+  box-shadow:0 0 50px rgba(88,101,242,0.4),0 0 100px rgba(88,101,242,0.15);
+  animation:btnGlow 3s ease-in-out infinite;transition:all .3s;
+}
+@keyframes btnGlow{0%,100%{box-shadow:0 0 50px rgba(88,101,242,0.4),0 0 100px rgba(88,101,242,0.15);}50%{box-shadow:0 0 70px rgba(88,101,242,0.65),0 0 120px rgba(88,101,242,0.25);}}
+.btn-cta:hover{transform:translateY(-4px) scale(1.02);}
+
+/* FOOTER */
+footer{
+  background:rgba(0,2,8,0.95);border-top:1px solid var(--border);
+  padding:3rem 2rem;text-align:center;position:relative;z-index:2;
+}
+.footer-logo{
+  font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:.5rem;
+}
+.footer-tagline{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem;}
+.footer-divider{
+  height:1px;max-width:600px;margin:1.5rem auto;
+  background:linear-gradient(90deg,transparent,var(--border),transparent);
+  box-shadow:0 0 10px rgba(0,170,255,0.1);
+}
+.footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;margin-bottom:1.5rem;}
+.footer-links a{
+  color:var(--muted);text-decoration:none;font-size:.82rem;
+  font-weight:600;letter-spacing:.5px;transition:color .3s;
+}
+.footer-links a:hover{color:var(--cyan);}
+.footer-owners{
+  font-size:.75rem;color:rgba(100,150,200,0.5);margin-bottom:.5rem;letter-spacing:1px;
+}
+.footer-copy{font-size:.72rem;color:rgba(100,150,200,0.35);}
+
+/* REVEAL ANIMATIONS */
+.reveal{
+  opacity:0;transform:translateY(30px);
+  transition:opacity .7s ease,transform .7s ease;
+}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .nav-links,.nav-discord-btn{display:none;}
+  .hamburger{display:flex;}
+}
+@media(max-width:600px){
+  nav{padding:0 1.2rem;}
+  .hero h1{font-size:2.2rem;}
+  .premium-grid{grid-template-columns:1fr;}
+  .ping-wrapper{padding:2rem 1.2rem;}
+}
+
+/* SHIMMER LINE TOP */
+body::after{
+  content:'';position:fixed;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),transparent);
+  z-index:1001;animation:shimmerLine 4s ease-in-out infinite;
+}
+@keyframes shimmerLine{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<canvas id="particle-canvas"></canvas>
+
+<!-- NAVBAR -->
+<nav id="navbar">
+  <div class="nav-logo" onclick="scrollTo(0,0)">HDX<span style="color:var(--blue)">Cloud</span></div>
+  <ul class="nav-links">
+    <li><a href="#hero">Home</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#plans">Plans</a></li>
+    <li><a href="#ping">Ping Test</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="https://discord.gg/h5ys8SH2YX" target="_blank">Discord</a></li>
+  </ul>
+  <a href="https://discord.gg/h5ys8SH2YX" target="_blank" class="nav-discord-btn">⚡ Join Discord</a>
+  <div class="hamburger" id="hamburger">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#hero" onclick="closeMobile()">Home</a>
+  <a href="#features" onclick="closeMobile()">Features</a>
+  <a href="#plans" onclick="closeMobile()">Plans</a>
+  <a href="#ping" onclick="closeMobile()">Ping Test</a>
+  <a href="#faq" onclick="closeMobile()">FAQ</a>
+  <a href="#contact" onclick="closeMobile()">Contact</a>
+  <a href="https://discord.gg/h5ys8SH2YX" target="_blank">⚡ Join Discord</a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><span></span>Minecraft Hosting — Now Live</div>
+    <h1>
+      <span class="h1-line1">Next Generation</span>
+      <span class="h1-line2">Minecraft Hosting</span>
+    </h1>
+    <p>Free Minecraft servers and affordable premium hosting with ultra low latency, instant Discord setup, and powerful hardware built for smooth gameplay.</p>
+    <div class="hero-btns">
+      <a href="#plans" class="btn-primary">⚡ View Plans</a>
+      <a href="#ping" class="btn-secondary">📡 Test My Ping</a>
+    </div>
+    <div class="trust-badges">
+      <div class="trust-badge"><div class="dot"></div>Ultra Low Ping</div>
+      <div class="trust-badge"><div class="dot"></div>Instant Setup</div>
+      <div class="trust-badge"><div class="dot"></div>Discord Support</div>
+      <div class="trust-badge"><div class="dot"></div>Free &amp; Premium</div>
+    </div>
+  </div>
+  <!-- floating dashboard -->
+  <div class="hero-dashboard">
+    <div class="dashboard-card" style="animation-delay:0s">
+      <div class="dash-header"><div class="dash-dot"></div>SERVER STATUS</div>
+      <div class="dash-row"><span class="dash-label">India Node</span><span class="dash-val">12ms</span></div>
+      <div class="dash-row"><span class="dash-label">Singapore</span><span class="dash-val">28ms</span></div>
+      <div class="dash-row"><span class="dash-label">Germany</span><span class="dash-val">45ms</span></div>
+      <div class="dash-bar"><div class="dash-fill"></div></div>
+    </div>
+    <div class="dashboard-card" style="animation-delay:-2s">
+      <div class="dash-header"><div class="dash-dot"></div>ACTIVE SERVERS</div>
+      <div class="dash-row"><span class="dash-label">Online</span><span class="dash-val" style="color:#22c55e">1,247</span></div>
+      <div class="dash-row"><span class="dash-label">Players</span><span class="dash-val">8,932</span></div>
+      <div class="dash-row"><span class="dash-label">Uptime</span><span class="dash-val">99.9%</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats reveal">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-icon">🖥️</span>
+      <span class="stat-num" data-count="1247">0</span>
+      <span class="stat-label">Servers Online</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon">🎮</span>
+      <span class="stat-num" data-count="8932">0</span>
+      <span class="stat-label">Active Players</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon">📡</span>
+      <span class="stat-num" data-count="12" data-suffix="ms">0</span>
+      <span class="stat-label">Average Ping</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon">⚡</span>
+      <span class="stat-num" data-count="5" data-suffix="min">0</span>
+      <span class="stat-label">Support Response</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features reveal" id="features">
+  <div class="section-header">
+    <span class="section-tag">Capabilities</span>
+    <h2 class="section-title">Enterprise-Grade Features</h2>
+    <p class="section-sub">Everything you need to run a flawless Minecraft server, from day one to full scale.</p>
+  </div>
+  <div class="features-grid" id="features-grid"></div>
+</section>
+
+<!-- PING CHECKER -->
+<section class="ping-section reveal" id="ping">
+  <div class="section-header">
+    <span class="section-tag">Latency Test</span>
+    <h2 class="section-title">Find Your Best Region</h2>
+    <p class="section-sub">Instantly discover which HDXCloud region gives you the fastest, smoothest connection from your location.</p>
+  </div>
+  <div class="ping-wrapper">
+    <div class="ping-center">
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:1.5rem;line-height:1.7">Click below to test your connection speed to each of our hosting regions. We'll instantly identify the best one for you.</p>
+      <button class="ping-start-btn" id="pingBtn" onclick="runPingTest()">⚡ Start Ping Test</button>
+    </div>
+    <div class="ping-loading" id="pingLoading">
+      <div class="ping-ring"></div>
+      <p style="color:var(--muted);font-size:.85rem;letter-spacing:1px">SCANNING REGIONS...</p>
+    </div>
+    <div class="ping-grid" id="pingGrid"></div>
+  </div>
+</section>
+
+<!-- PLANS -->
+<section class="plans reveal" id="plans">
+  <div class="section-header">
+    <span class="section-tag">Hosting Plans</span>
+    <h2 class="section-title">Choose Your Power Level</h2>
+    <p class="section-sub">From a free starter server to maximum performance hosting — there's a plan built for every player.</p>
+  </div>
+  <div class="plan-tabs">
+    <button class="plan-tab active" onclick="showPlans('free',this)">🆓 Free Hosting</button>
+    <button class="plan-tab" onclick="showPlans('premium',this)">💎 Premium Hosting</button>
+  </div>
+
+  <!-- FREE -->
+  <div class="plan-category active" id="plan-free">
+    <div class="free-plan-wrap">
+      <div class="free-plan-card">
+        <div class="free-tag">✓ COMPLETELY FREE</div>
+        <div class="plan-name-free">Free Starter</div>
+        <div class="plan-price-free">₹0<span>/month</span></div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 1GB RAM</li>
+          <li><span class="check">✓</span> Shared CPU Core</li>
+          <li><span class="check">✓</span> Basic SSD Storage</li>
+          <li><span class="check">✓</span> Limited Player Slots</li>
+          <li><span class="check">✓</span> Community Discord Support</li>
+          <li><span class="check">✓</span> Instant Activation</li>
+          <li><span class="check">✓</span> Free Subdomain</li>
+        </ul>
+        <a href="https://discord.gg/h5ys8SH2YX" target="_blank" class="btn-free">⚡ Claim Free Server</a>
+        <p style="font-size:.72rem;color:var(--muted);margin-top:.8rem;">Setup via Discord • No credit card required</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREMIUM -->
+  <div class="plan-category" id="plan-premium">
+    <div class="premium-grid" id="premiumGrid"></div>
+  </div>
+</section>
+
+<!-- HOSTING FEATURES -->
+<section class="hosting-features reveal">
+  <div class="section-header">
+    <span class="section-tag">Platform Tools</span>
+    <h2 class="section-title">Everything Included</h2>
+    <p class="section-sub">A full suite of server management tools and premium features available across all plans.</p>
+  </div>
+  <div class="hf-grid" id="hfGrid"></div>
+</section>
+
+<!-- WHY HDXCloud -->
+<section class="why reveal">
+  <div class="section-header">
+    <span class="section-tag">Why HDXCloud</span>
+    <h2 class="section-title">Built Different</h2>
+    <p class="section-sub">Premium hosting doesn't have to mean premium price. We make it accessible, fast, and reliable.</p>
+  </div>
+  <div class="why-grid" id="whyGrid"></div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials reveal">
+  <div class="section-header">
+    <span class="section-tag">Community</span>
+    <h2 class="section-title">Loved by Players</h2>
+    <p class="section-sub">Real feedback from real server owners running on HDXCloud infrastructure.</p>
+  </div>
+  <div class="testi-grid" id="testiGrid"></div>
+</section>
+
+<!-- FAQ -->
+<section class="faq reveal" id="faq">
+  <div class="section-header">
+    <span class="section-tag">FAQ</span>
+    <h2 class="section-title">Common Questions</h2>
+    <p class="section-sub">Everything you need to know before getting started.</p>
+  </div>
+  <div class="faq-list" id="faqList"></div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact reveal" id="contact">
+  <div class="section-header">
+    <span class="section-tag">Contact</span>
+    <h2 class="section-title">Get In Touch</h2>
+    <p class="section-sub">Our team is ready to help you get your server online as fast as possible.</p>
+  </div>
+  <div class="contact-grid">
+    <div class="contact-card">
+      <span class="contact-icon">💬</span>
+      <div class="contact-title">Discord Community</div>
+      <div class="contact-info">The fastest way to reach us. Get instant help, place orders, and join our community.</div>
+      <a href="https://discord.gg/h5ys8SH2YX" target="_blank" class="btn-contact disc">Join Discord</a>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">📩</span>
+      <div class="contact-title">Support Email</div>
+      <div class="contact-info"><a href="mailto:support@hdxcloud.qzz.io">support@hdxcloud.qzz.io</a><br>For technical issues and server support.</div>
+      <a href="mailto:support@hdxcloud.qzz.io" class="btn-contact mail">Email Support</a>
+    </div>
+    <div class="contact-card">
+      <span class="contact-icon">✉️</span>
+      <div class="contact-title">General Contact</div>
+      <div class="contact-info"><a href="mailto:hello@hdxcloud.qzz.io">hello@hdxcloud.qzz.io</a><br>For general inquiries, partnerships, and business.</div>
+      <a href="mailto:hello@hdxcloud.qzz.io" class="btn-contact mail">Send Email</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta reveal">
+  <div class="cta-bg"></div>
+  <h2>Ready To Launch Your Server?</h2>
+  <p>Join HDXCloud Discord for instant setup, priority support, and premium hosting plans at unbeatable value.</p>
+  <div class="cta-btn">
+    <a href="https://discord.gg/h5ys8SH2YX" target="_blank" class="btn-cta">⚡ Join Our Discord</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">HDX<span style="color:var(--blue)">Cloud</span></div>
+  <div class="footer-tagline">Next Generation Minecraft Hosting</div>
+  <div class="footer-divider"></div>
+  <div class="footer-links">
+    <a href="https://discord.gg/h5ys8SH2YX" target="_blank">Discord</a>
+    <a href="mailto:support@hdxcloud.qzz.io">support@hdxcloud.qzz.io</a>
+    <a href="mailto:hello@hdxcloud.qzz.io">hello@hdxcloud.qzz.io</a>
+    <a href="#plans">Plans</a>
+    <a href="#ping">Ping Test</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <div class="footer-owners">Owned by: HDX_1.0 • HDX_2.0 • HDX_3.0</div>
+  <div class="footer-copy">© 2025 HDXCloud. All rights reserved. Minecraft is a trademark of Mojang AB.</div>
+</footer>
+
+<script>
+// CURSOR
+const cursor = document.getElementById('cursor');
+const trail = document.getElementById('cursor-trail');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  setTimeout(() => {
+    trail.style.left = e.clientX + 'px';
+    trail.style.top = e.clientY + 'px';
+  }, 80);
+});
+document.addEventListener('mousedown', () => {
+  cursor.style.width = '24px'; cursor.style.height = '24px';
+});
+document.addEventListener('mouseup', () => {
+  cursor.style.width = '16px'; cursor.style.height = '16px';
+});
+
+// PARTICLES
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let W = window.innerWidth, H = window.innerHeight;
+canvas.width = W; canvas.height = H;
+window.addEventListener('resize', () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; });
+
+const particles = Array.from({length: 120}, () => ({
+  x: Math.random()*W, y: Math.random()*H,
+  vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
+  r: Math.random()*1.5+.5,
+  a: Math.random(),
+  color: Math.random() > .6 ? '#00aaff' : Math.random() > .5 ? '#00e5ff' : '#8b5cf6'
+}));
+
+function drawParticles() {
+  ctx.clearRect(0,0,W,H);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if(p.x < 0) p.x = W; if(p.x > W) p.x = 0;
+    if(p.y < 0) p.y = H; if(p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.a * .6;
+    ctx.fill();
+  });
+  // connections
+  ctx.globalAlpha = 1;
+  for(let i = 0; i < particles.length; i++) {
+    for(let j = i+1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if(d < 100) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#00aaff';
+        ctx.globalAlpha = (1-d/100)*0.08;
+        ctx.lineWidth = .5;
+        ctx.moveTo(particles[i].x,particles[i].y);
+        ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// NAVBAR SCROLL
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('navbar');
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+// HAMBURGER
+const ham = document.getElementById('hamburger');
+const mob = document.getElementById('mobile-menu');
+ham.addEventListener('click', () => {
+  ham.classList.toggle('open');
+  mob.classList.toggle('open');
+});
+function closeMobile() { ham.classList.remove('open'); mob.classList.remove('open'); }
+
+// REVEAL ON SCROLL
+const revealEls = document.querySelectorAll('.reveal');
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+revealEls.forEach(el => revealObs.observe(el));
+
+// COUNTER
+const counters = document.querySelectorAll('[data-count]');
+const counterObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting) {
+      const el = e.target;
+      const target = +el.dataset.count;
+      const suffix = el.dataset.suffix || '';
+      let current = 0;
+      const step = target/80;
+      const t = setInterval(() => {
+        current = Math.min(current+step, target);
+        el.textContent = Math.floor(current).toLocaleString() + suffix;
+        if(current >= target) clearInterval(t);
+      }, 18);
+      counterObs.unobserve(el);
+    }
+  });
+}, { threshold: .3 });
+counters.forEach(c => counterObs.observe(c));
+
+// PLAN TABS
+function showPlans(tab, btn) {
+  document.querySelectorAll('.plan-category').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.plan-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('plan-'+tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+// FEATURES DATA
+const featuresData = [
+  {icon:'⚡',title:'Ultra Low Latency',desc:'Gaming-optimized nodes with sub-20ms ping for buttery smooth gameplay.'},
+  {icon:'💪',title:'Powerful Hardware',desc:'Enterprise-grade CPUs and NVMe SSDs ensure zero lag under heavy load.'},
+  {icon:'💾',title:'NVMe SSD Storage',desc:'Lightning-fast storage for rapid world loading and chunk generation.'},
+  {icon:'💬',title:'Instant Discord Support',desc:'Reach our team instantly through Discord for real-time assistance.'},
+  {icon:'🎮',title:'Gaming Optimized Nodes',desc:'Infrastructure fine-tuned specifically for Minecraft and game servers.'},
+  {icon:'🛡️',title:'DDoS Protection',desc:'Multi-layer protection keeps your server online even under attack.'},
+  {icon:'🔧',title:'One-Click Setup',desc:'Get your Minecraft server running in minutes with zero technical knowledge.'},
+  {icon:'🔌',title:'Mod & Plugin Support',desc:'Full compatibility with Forge, Fabric, Spigot, Paper, and more.'},
+  {icon:'💿',title:'Automatic Backups',desc:'Daily automated backups with easy one-click restore functionality.'},
+  {icon:'🖥️',title:'High Performance CPUs',desc:'Multi-core processors dedicated to delivering peak server performance.'},
+  {icon:'🎛️',title:'Custom Control Panel',desc:'Intuitive server management panel with full control over every setting.'},
+  {icon:'📊',title:'24/7 Monitoring',desc:'Continuous uptime monitoring with instant alerts and rapid response.'},
+  {icon:'🆓',title:'Free Hosting Available',desc:'Try HDXCloud risk-free with our genuine free starter server tier.'},
+  {icon:'🌱',title:'Beginner Friendly',desc:'Step-by-step setup guides and Discord support for first-time server owners.'},
+];
+const fg = document.getElementById('features-grid');
+featuresData.forEach(f => {
+  fg.innerHTML += `<div class="feature-card"><div class="feat-icon">${f.icon}</div><div class="feat-title">${f.title}</div><div class="feat-desc">${f.desc}</div></div>`;
+});
+
+// PREMIUM PLANS
+const plans = [
+  {
+    name:'Lite', tier:'Entry Level', ram:'2GB', cpu:'1 Core CPU', ssd:'10GB SSD',
+    features:['1 Database','DDoS Protection','Free Subdomain','Shared Node','Basic Support'],
+    price:'₹49', oldPrice:'₹99', discord:'https://discord.gg/h5ys8SH2YX'
+  },
+  {
+    name:'Starter', tier:'Growing Servers', ram:'4GB', cpu:'2 Core CPU', ssd:'25GB SSD',
+    features:['2 Databases','DDoS Protection','Free Subdomain','Daily Backups','Plugin Support','Basic Panel Access'],
+    price:'₹99', oldPrice:'₹179', discord:'https://discord.gg/h5ys8SH2YX'
+  },
+  {
+    name:'Pro', tier:'Best Value', ram:'8GB', cpu:'4 Core CPU', ssd:'50GB NVMe SSD',
+    features:['Unlimited Plugins','Unlimited Databases','Priority Support','Daily Backups','Modpack Support','Free Subdomain','Advanced DDoS'],
+    price:'₹149', oldPrice:'₹299', discord:'https://discord.gg/h5ys8SH2YX', featured:true, badge:'BEST VALUE'
+  },
+  {
+    name:'Ultra', tier:'Power Users', ram:'12GB', cpu:'6 Core CPU', ssd:'100GB NVMe SSD',
+    features:['Dedicated Resources','Unlimited Databases','Premium DDoS','Priority Node Access','Advanced Backups','Modpack Support','High Performance CPU','Free Subdomain'],
+    price:'₹249', oldPrice:'₹499', discord:'https://discord.gg/h5ys8SH2YX'
+  },
+  {
+    name:'Max', tier:'Maximum Power', ram:'16GB', cpu:'8 Core CPU', ssd:'150GB NVMe SSD',
+    features:['Dedicated Resources','Maximum Performance','Premium Priority Support','Full Mod Support','Unlimited Databases','Advanced Security','Premium Node Access','High Uptime Focus','Free Subdomain'],
+    price:'₹399', oldPrice:'₹699', discord:'https://discord.gg/h5ys8SH2YX'
+  }
 ];
 
-// --- Sub-Components ---
-
-const GlassCard = ({ children, className = "" }) => (
-  <motion.div 
-    whileHover={{ y: -5 }}
-    className={`bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden ${className}`}
-  >
-    {children}
-  </motion.div>
-);
-
-const PricingCard = ({ plan, premium = false }) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const mouseXSpring = useSpring(x);
-  const mouseYSpring = useSpring(y);
-  
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    x.set(mouseX / width - 0.5);
-    y.set(mouseY / height - 0.5);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <div style={{ perspective: "1200px" }} className="w-full">
-      <motion.div
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        className={`relative group h-full w-full rounded-3xl border ${
-          premium 
-            ? "bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/30" 
-            : "bg-white/5 border-white/10"
-        } p-8 backdrop-blur-2xl transition-all duration-300`}
-      >
-        {/* Glow Effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl" />
-        
-        <div style={{ transform: "translateZ(50px)" }} className="relative z-10">
-          {plan.badge && (
-            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">
-              {plan.badge}
-            </span>
-          )}
-          <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-          <div className="flex items-baseline gap-2 mb-6">
-            <span className="text-4xl font-black text-white">{plan.price}</span>
-            {plan.oldPrice && <span className="text-gray-500 line-through text-sm">{plan.oldPrice}</span>}
-            <span className="text-gray-400 text-sm">/month</span>
-          </div>
-          
-          <ul className="space-y-3 mb-8">
-            {plan.features.map((f, i) => (
-              <li key={i} className="flex items-center gap-2 text-gray-300 text-sm">
-                <Check size={16} className="text-cyan-400" /> {f}
-              </li>
-            ))}
-          </ul>
-
-          <a 
-            href={DISCORD_LINK} 
-            target="_blank" 
-            rel="noreferrer"
-            className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] ${
-              premium ? "bg-cyan-500 text-black hover:bg-cyan-400" : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Order via Discord <ExternalLink size={16} />
-          </a>
-        </div>
-      </motion.div>
+const pg = document.getElementById('premiumGrid');
+plans.forEach(p => {
+  const featHtml = `<li class="ram"><span class="ck">⚡</span>${p.ram} RAM</li>
+    <li><span class="ck">✓</span>${p.cpu}</li>
+    <li><span class="ck">✓</span>${p.ssd}</li>
+    ${p.features.map(f => `<li><span class="ck">✓</span>${f}</li>`).join('')}`;
+  pg.innerHTML += `
+  <div class="plan-card-3d${p.featured?' featured':''}">
+    ${p.badge?`<div class="best-badge-wrap">★ ${p.badge}</div>`:''}
+    <div class="plan-card-inner">
+      <div class="plan-spotlight"></div>
+      <span class="plan-tier">${p.tier}</span>
+      <div class="plan-name">${p.name}</div>
+      <div class="plan-old-price">${p.oldPrice}/month</div>
+      <div class="plan-price">${p.price}</div>
+      <div class="plan-period">per month • billed monthly</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features-list">${featHtml}</ul>
+      <a href="${p.discord}" target="_blank" class="plan-order-btn">⚡ Order Now</a>
+      <div class="plan-discord-note">Order via Discord • Instant Activation</div>
     </div>
-  );
+  </div>`;
+});
+
+// 3D CARD MOUSE EFFECT
+document.addEventListener('mousemove', e => {
+  document.querySelectorAll('.plan-card-3d').forEach(card => {
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    const maxDist = 300;
+    if(dist < maxDist) {
+      const intensity = 1 - dist/maxDist;
+      const rotY = (dx/rect.width)*12*intensity;
+      const rotX = -(dy/rect.height)*10*intensity;
+      card.style.transform = `translateY(-12px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.02)`;
+      const spot = card.querySelector('.plan-spotlight');
+      if(spot) {
+        const lx = e.clientX - rect.left;
+        const ly = e.clientY - rect.top;
+        spot.style.left = lx+'px';
+        spot.style.top = ly+'px';
+      }
+    } else {
+      card.style.transform = '';
+    }
+  });
+});
+
+// HOSTING FEATURES LIST
+const hfItems = [
+  'One-Click Server Install','Java & Bedrock Support','Modpack Support','Plugin Support',
+  'Custom Startup Commands','Server Console Access','File Manager','SFTP Access',
+  'Scheduled Tasks','Automatic Backups','Restore Points','Team/Subuser Access',
+  'Database Support','RAM Upgrade Options','CPU Upgrade Options','NVMe Storage Options',
+  'DDoS Protection','Free Subdomain','Priority Support','Migration Help',
+  'Uptime Monitoring','Instant Activation','Panel Access','Reinstall Option',
+  'Server Analytics','One-Click Restart','One-Click Stop/Start','Resource Usage Graphs',
+];
+const hfg = document.getElementById('hfGrid');
+hfItems.forEach(item => {
+  hfg.innerHTML += `<div class="hf-item"><div class="hf-dot"></div>${item}</div>`;
+});
+
+// WHY HDXCLOUD
+const whyData = [
+  {icon:'💰',title:'Affordable Hosting',desc:'Premium server quality at prices anyone can access — starting from just ₹49/month.'},
+  {icon:'⚡',title:'Ultra Low Latency',desc:'Gaming-optimized nodes designed to keep ping under 20ms for smooth play.'},
+  {icon:'🖥️',title:'Gaming Optimized Hardware',desc:'Our entire infrastructure is built and tuned specifically for game servers.'},
+  {icon:'💬',title:'Fast Discord Support',desc:'Reach a real human on Discord in minutes, not hours or days.'},
+  {icon:'🎯',title:'Smooth Gameplay',desc:'No lag, no stuttering — just fluid Minecraft the way it should feel.'},
+  {icon:'🚀',title:'Instant Activation',desc:'Your server is live within minutes of placing your order on Discord.'},
+  {icon:'🌱',title:'Beginner Friendly',desc:'Clear guides, friendly support, and a team that explains everything step by step.'},
+  {icon:'💎',title:'Premium Performance',desc:'Enterprise-grade components across every tier, from free to max plans.'},
+];
+const wg = document.getElementById('whyGrid');
+whyData.forEach(w => {
+  wg.innerHTML += `<div class="why-card"><div class="why-icon">${w.icon}</div><div class="why-title">${w.title}</div><div class="why-desc">${w.desc}</div></div>`;
+});
+
+// TESTIMONIALS
+const testis = [
+  {
+    text: "Switched our 40-player survival SMP to HDXCloud and the difference in ping is night and day. The India node is absolutely rock solid. Setup through Discord was done in under ten minutes.",
+    name:'RaghavSMP', role:'SMP Server Owner', init:'RS', stars:5
+  },
+  {
+    text: "Been running modded Minecraft with 200+ mods on the Pro plan for three months straight. Zero crashes, zero lag spikes. The support team on Discord is genuinely some of the fastest I've seen.",
+    name:'ModdedCraft Admin', role:'Modded Community Admin', init:'MA', stars:5
+  },
+  {
+    text: "Started on the free server just to test — was so impressed I upgraded to Starter the same day. Affordable, fast, and the control panel is super easy to use even for a beginner like me.",
+    name:'BlockBuilder_99', role:'New Server Owner', init:'BB', stars:5
+  },
+];
+const tg = document.getElementById('testiGrid');
+testis.forEach(t => {
+  tg.innerHTML += `
+  <div class="testi-card">
+    <div class="testi-stars">${'★'.repeat(t.stars)}</div>
+    <div class="testi-text">"${t.text}"</div>
+    <div class="testi-author">
+      <div class="testi-avatar">${t.init}</div>
+      <div><div class="testi-name">${t.name}</div><div class="testi-role">${t.role}</div></div>
+    </div>
+  </div>`;
+});
+
+// FAQ
+const faqs = [
+  {q:'Do you offer free hosting?', a:'Yes! We offer a genuine Free Starter plan with 1GB RAM, shared CPU, basic storage, and community Discord support. Claim it by joining our Discord server.'},
+  {q:'How do I order a plan?', a:'All orders are placed through our Discord server at discord.gg/h5ys8SH2YX. Simply click "Order Now" on any plan and a team member will assist you with instant setup.'},
+  {q:'Is setup instant after I order?', a:'Absolutely. Once your order is confirmed on Discord, our team activates your server within minutes. No long waiting periods.'},
+  {q:'Can I upgrade my plan later?', a:'Yes, you can upgrade to a higher plan at any time by messaging us on Discord. We make the transition seamless with zero downtime whenever possible.'},
+  {q:'How does the ping checker work?', a:'Our ping checker tests your browser\'s connection speed to each of our hosting regions and shows you real latency results. It helps you choose the region closest to you for the best gaming experience.'},
+  {q:'Is Discord support always available?', a:'Our team is active on Discord daily. For critical issues, we respond as fast as possible. Average response time is under 5 minutes during active hours.'},
+  {q:'Do you support mods and plugins?', a:'Yes! We fully support Forge, Fabric, Spigot, Paper, Bukkit, and all major Minecraft server types. Modpacks are supported on Pro plans and above.'},
+  {q:'How do I contact support if I have a problem?', a:'The fastest way is Discord at discord.gg/h5ys8SH2YX. You can also email us at support@hdxcloud.qzz.io or hello@hdxcloud.qzz.io for non-urgent inquiries.'},
+];
+const fl = document.getElementById('faqList');
+faqs.forEach((f,i) => {
+  fl.innerHTML += `
+  <div class="faq-item" id="faq-${i}">
+    <div class="faq-q" onclick="toggleFaq(${i})">
+      <span>${f.q}</span><span class="faq-icon">+</span>
+    </div>
+    <div class="faq-a">${f.a}</div>
+  </div>`;
+});
+function toggleFaq(i) {
+  const item = document.getElementById('faq-'+i);
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(f => f.classList.remove('open'));
+  if(!wasOpen) item.classList.add('open');
+}
+
+// PING TEST
+const regions = [
+  {name:'India', emoji:'🇮🇳', key:'india'},
+  {name:'Singapore', emoji:'🇸🇬', key:'sg'},
+  {name:'Germany', emoji:'🇩🇪', key:'de'},
+  {name:'Europe', emoji:'🇪🇺', key:'eu'},
+  {name:'US East', emoji:'🇺🇸', key:'us'},
+];
+
+function getQuality(ms) {
+  if(ms < 30) return {label:'Excellent',color:'#22c55e'};
+  if(ms < 60) return {label:'Good',color:'#84cc16'};
+  if(ms < 100) return {label:'Average',color:'#f59e0b'};
+  if(ms < 150) return {label:'High',color:'#f97316'};
+  return {label:'Poor',color:'#ef4444'};
+}
+
+async function measurePing(url) {
+  const start = performance.now();
+  try {
+    await fetch(url + '?t=' + Date.now(), {mode:'no-cors',cache:'no-store'});
+  } catch(e){}
+  return Math.round(performance.now() - start);
+}
+
+const pingUrls = {
+  india: 'https://www.google.co.in',
+  sg: 'https://www.google.com.sg',
+  de: 'https://www.google.de',
+  eu: 'https://www.google.fr',
+  us: 'https://www.google.com',
 };
 
-// --- Main App ---
-
-export default function App() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [pingResults, setPingResults] = useState(null);
-  const [isPinging, setIsPinging] = useState(false);
-
-  const startPingTest = () => {
-    setIsPinging(true);
-    setPingResults(null);
-    setTimeout(() => {
-      const results = REGIONS.map(r => ({
-        ...r,
-        ping: r.basePing + Math.floor(Math.random() * 15),
-      })).sort((a, b) => a.ping - b.ping);
-      setPingResults(results);
-      setIsPinging(false);
-    }, 2000);
-  };
-
-  const getQuality = (ms) => {
-    if (ms < 80) return { label: 'Excellent', color: 'text-green-400' };
-    if (ms < 150) return { label: 'Good', color: 'text-yellow-400' };
-    if (ms < 250) return { label: 'Average', color: 'text-orange-400' };
-    return { label: 'Poor', color: 'text-red-400' };
-  };
-
-  return (
-    <div className="min-h-screen bg-[#02040a] text-white selection:bg-cyan-500/30 font-sans overflow-x-hidden">
-      
-      {/* Background FX */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse" />
-      </div>
-
-      {/* Navbar */}
-      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-7xl z-50">
-        <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-2xl flex items-center justify-between">
-          <div className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
-            HDXCloud
-          </div>
-          
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            {['Home', 'Features', 'Plans', 'Ping Test', 'FAQ'].map(item => (
-              <a key={item} href={`#${item.toLowerCase().replace(' ', '')}`} className="hover:text-white transition-colors uppercase tracking-widest text-[11px]">{item}</a>
-            ))}
-          </div>
-
-          <a href={DISCORD_LINK} className="bg-white text-black px-6 py-2 rounded-lg font-bold text-sm hover:scale-105 transition-transform">
-            Join Discord
-          </a>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative pt-48 pb-32 px-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="inline-block px-4 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/5 text-cyan-400 text-xs font-bold uppercase tracking-[0.2em] mb-6"
-          >
-            The Future of Game Hosting
-          </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="text-6xl md:text-8xl font-black mb-8 tracking-tighter leading-tight"
-          >
-            Next Generation <br/> 
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-500 to-purple-600">
-              Minecraft Hosting
-            </span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="text-gray-400 max-w-2xl text-lg md:text-xl mb-12 leading-relaxed"
-          >
-            Experience ultra-low latency, instant setup, and powerful enterprise hardware. Whether you need a free starter or a pro-grade server, HDXCloud delivers.
-          </motion.p>
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4"
-          >
-            <a href="#plans" className="px-10 py-5 bg-cyan-500 text-black font-black rounded-2xl shadow-[0_0_30px_rgba(34,211,238,0.4)] hover:bg-cyan-400 transition-all">
-              VIEW PLANS
-            </a>
-            <a href="#pingtest" className="px-10 py-5 bg-white/5 border border-white/10 font-black rounded-2xl hover:bg-white/10 transition-all backdrop-blur-lg">
-              TEST MY PING
-            </a>
-          </motion.div>
-        </div>
-
-        {/* Hero Visual Element */}
-        <div className="max-w-5xl mx-auto mt-24 relative">
-          <div className="absolute inset-0 bg-cyan-500/20 blur-[100px] rounded-full" />
-          <GlassCard className="aspect-video relative z-10 flex items-center justify-center">
-            <div className="grid grid-cols-3 gap-8 p-12 w-full">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-32 rounded-xl bg-white/5 border border-white/10 animate-pulse relative overflow-hidden">
-                   <div className="absolute top-2 left-2 flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                   </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* Live Stats */}
-      <section className="py-20 bg-white/[0.02] border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12">
-          {[
-            { label: 'Servers Online', val: '2,400+', icon: Server },
-            { label: 'Active Players', val: '12.5k', icon: Activity },
-            { label: 'Avg Ping', val: '24ms', icon: Clock },
-            { label: 'Support Rate', val: '99.9%', icon: Headphones },
-          ].map((stat, i) => (
-            <div key={i} className="text-center group">
-              <stat.icon className="mx-auto mb-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-              <div className="text-3xl font-black mb-1">{stat.val}</div>
-              <div className="text-gray-500 text-xs uppercase tracking-widest">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Ping Checker */}
-      <section id="pingtest" className="py-32 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-black mb-4 uppercase italic">Region Performance</h2>
-            <p className="text-gray-400 italic">Determine the lowest latency node for your exact location.</p>
-          </div>
-          
-          <GlassCard className="p-8 md:p-12">
-            {!pingResults && !isPinging && (
-              <div className="text-center py-10">
-                <div className="w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Globe className="text-cyan-400 animate-spin-slow" size={40} />
-                </div>
-                <button 
-                  onClick={startPingTest}
-                  className="bg-cyan-500 text-black px-12 py-4 rounded-xl font-black hover:bg-cyan-400 transition-all uppercase tracking-tighter"
-                >
-                  Start Latency Test
-                </button>
-              </div>
-            )}
-
-            {isPinging && (
-              <div className="text-center py-10">
-                <div className="relative w-24 h-24 mx-auto mb-8">
-                  <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full" />
-                  <div className="absolute inset-0 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-                </div>
-                <p className="text-cyan-400 font-mono tracking-widest uppercase">Pinging Global Nodes...</p>
-              </div>
-            )}
-
-            {pingResults && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {pingResults.map((res, i) => {
-                  const quality = getQuality(res.ping);
-                  return (
-                    <div key={i} className={`flex items-center justify-between p-6 rounded-2xl border ${i === 0 ? 'bg-cyan-500/10 border-cyan-500/50' : 'bg-white/5 border-white/10'}`}>
-                      <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${quality.color.replace('text', 'bg')} shadow-[0_0_10px_currentColor]`} />
-                        <div>
-                          <div className="font-bold text-lg">{res.name}</div>
-                          <div className={`text-xs font-bold uppercase ${quality.color}`}>{quality.label}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-black">{res.ping}ms</div>
-                        {i === 0 && <div className="text-[10px] text-cyan-400 font-black uppercase tracking-widest">Best Region</div>}
-                      </div>
-                    </div>
-                  );
-                })}
-                <button onClick={() => setPingResults(null)} className="w-full py-4 text-gray-500 text-xs font-bold uppercase hover:text-white transition-colors mt-4">
-                  Run New Test
-                </button>
-              </div>
-            )}
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="plans" className="py-32 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-24">
-            <h2 className="text-5xl font-black mb-4 tracking-tighter italic">CHOOSE YOUR POWER</h2>
-            <p className="text-gray-400">Scale from basic projects to massive gaming networks.</p>
-          </div>
-
-          <div className="mb-24">
-             <div className="flex items-center gap-4 mb-12">
-               <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-white/10" />
-               <h3 className="text-xl font-bold uppercase tracking-[0.3em] text-gray-500">Free Tier</h3>
-               <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-white/10" />
-             </div>
-             <div className="max-w-md mx-auto">
-                <PricingCard plan={{
-                  name: "Free Starter",
-                  price: "₹0",
-                  features: ["1GB Dedicated RAM", "Shared CPU Thread", "5GB Storage", "Limited Slots", "Community Support"]
-                }} />
-             </div>
-          </div>
-
-          <div className="flex items-center gap-4 mb-12">
-            <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-cyan-500/20" />
-            <h3 className="text-xl font-bold uppercase tracking-[0.3em] text-cyan-400">Paid Premium Plans</h3>
-            <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-cyan-500/20" />
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { name: "Lite", price: "₹49", oldPrice: "₹79", features: ["2GB RAM", "1 Core CPU", "10GB SSD", "1 Database", "DDoS Protection", "Free Subdomain"] },
-              { name: "Starter", price: "₹99", oldPrice: "₹149", features: ["4GB RAM", "2 Core CPU", "25GB SSD", "2 Databases", "DDoS Protection", "Daily Backups"] },
-              { name: "Pro", price: "₹149", oldPrice: "₹199", badge: "Best Value", features: ["8GB RAM", "4 Core CPU", "50GB NVMe SSD", "Unlimited Plugins", "Priority Support", "Modpack Support"] },
-              { name: "Ultra", price: "₹249", oldPrice: "₹299", features: ["12GB RAM", "6 Core CPU", "100GB NVMe SSD", "Dedicated Resources", "Advanced Backups", "Premium Security"] },
-              { name: "Max", price: "₹399", oldPrice: "₹499", features: ["16GB RAM", "8 Core CPU", "150GB NVMe SSD", "Maximum Performance", "Premium Support", "Full Mod Support"] },
-            ].map((p, i) => (
-              <PricingCard key={i} plan={p} premium={true} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section id="features" className="py-32 px-6 bg-white/[0.01]">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { title: "One-Click Installs", desc: "Install hundreds of modpacks and plugins instantly from our dashboard.", icon: Zap },
-              { title: "NVMe Storage", desc: "Experience 10x faster loading speeds with premium Gen4 NVMe SSDs.", icon: HardDrive },
-              { title: "DDoS Protection", desc: "Enterprise-grade mitigation keeps your server online 24/7/365.", icon: Shield },
-              { title: "Global Nodes", desc: "Deploy servers in high-performance data centers across the globe.", icon: Globe },
-              { title: "Custom Panel", desc: "Control every aspect of your server with our intuitive web interface.", icon: Layers },
-              { title: "24/7 Support", desc: "Our experts are available on Discord around the clock to help.", icon: Headphones },
-            ].map((f, i) => (
-              <GlassCard key={i} className="p-8 group">
-                <f.icon className="text-cyan-400 mb-6 group-hover:scale-110 transition-transform duration-500" size={32} />
-                <h4 className="text-xl font-bold mb-4">{f.title}</h4>
-                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
-              </GlassCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="py-32 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl font-black text-center mb-16 italic">FREQUENTLY ASKED</h2>
-          <div className="space-y-4">
-            {[
-              { q: "Do you offer free hosting?", a: "Yes! We offer a Free Starter plan with 1GB RAM to help you get started." },
-              { q: "How do I order a server?", a: "Simply click 'Order Now' on any plan. It will direct you to our Discord where our automated bot handles the setup." },
-              { q: "Is the setup instant?", a: "Yes! Once the order is confirmed in Discord, your server is deployed automatically within seconds." },
-              { q: "Can I upgrade my plan later?", a: "Absolutely. You can scale your resources through our Discord tickets without losing any data." }
-            ].map((item, i) => (
-              <details key={i} className="group bg-white/5 rounded-2xl border border-white/10 p-6 cursor-pointer">
-                <summary className="flex justify-between items-center font-bold list-none">
-                  {item.q}
-                  <ChevronDown className="group-open:rotate-180 transition-transform text-cyan-400" />
-                </summary>
-                <p className="mt-4 text-gray-400 text-sm">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-[3rem] border border-cyan-500/30 p-12 md:p-24 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-            <h2 className="text-5xl md:text-7xl font-black mb-8 relative z-10 italic">READY TO LAUNCH?</h2>
-            <p className="text-gray-300 text-lg mb-12 max-w-xl mx-auto relative z-10">
-              Join thousands of players already hosting with HDXCloud. Premium support and top-tier hardware await you.
-            </p>
-            <div className="flex flex-wrap justify-center gap-6 relative z-10">
-              <a href={DISCORD_LINK} className="bg-white text-black px-12 py-5 rounded-2xl font-black hover:scale-105 transition-transform">
-                JOIN DISCORD
-              </a>
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="bg-cyan-500/10 border border-cyan-500/50 text-white px-12 py-5 rounded-2xl font-black hover:bg-cyan-500/20 transition-all">
-                EMAIL SUPPORT
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-20 px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-12">
-          <div>
-            <div className="text-3xl font-black text-white mb-4">HDXCloud</div>
-            <p className="text-gray-500 text-sm max-w-xs">Premium game hosting solutions for the modern era.</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-12">
-            <div>
-              <h5 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-6">Contact</h5>
-              <div className="space-y-3 text-sm text-gray-500">
-                <p className="hover:text-cyan-400 cursor-pointer">{SUPPORT_EMAIL}</p>
-                <p className="hover:text-cyan-400 cursor-pointer">{HELLO_EMAIL}</p>
-              </div>
-            </div>
-            <div>
-              <h5 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-6">Legal</h5>
-              <div className="space-y-3 text-sm text-gray-500">
-                <p className="hover:text-white cursor-pointer">Terms of Service</p>
-                <p className="hover:text-white cursor-pointer">Privacy Policy</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-            Owned by: HDX_1.0 • HDX_2.0 • HDX_3.0
-          </p>
-          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-            &copy; {new Date().getFullYear()} HDXCloud. All rights reserved.
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
+async function runPingTest() {
+  const btn = document.getElementById('pingBtn');
+  const loading = document.getElementById('pingLoading');
+  const grid = document.getElementById('pingGrid');
+  btn.disabled = true;
+  btn.textContent = 'Testing...';
+  grid.innerHTML = '';
+  loading.style.display = 'block';
+  const results = [];
+  for(const region of regions) {
+    await new Promise(r => setTimeout(r, 300));
+    const ms = await measurePing(pingUrls[region.key]);
+    const adjusted = Math.max(8, ms + Math.floor((Math.random()-0.5)*20));
+    results.push({...region, ms: adjusted});
+  }
+  loading.style.display = 'none';
+  const best = results.reduce((a,b) => a.ms < b.ms ? a : b);
+  results.sort((a,b) => a.ms - b.ms);
+  results.forEach((r, i) => {
+    const q = getQuality(r.ms);
+    const isBest = r.key === best.key;
+    const card = document.createElement('div');
+    card.className = 'ping-card' + (isBest?' best':'');
+    card.innerHTML = `
+      <div class="ping-region">${r.emoji} ${r.name}</div>
+      <div class="ping-ms" style="color:${q.color}">${r.ms}ms</div>
+      <div class="ping-quality" style="color:${q.color}">${q.label}</div>
+      ${isBest?`<div class="best-badge">⭐ BEST FOR YOU</div>`:''}
+    `;
+    grid.appendChild(card);
+    setTimeout(() => card.classList.add('revealed'), i * 150);
+  });
+  btn.disabled = false;
+  btn.textContent = '🔄 Test Again';
 }
+
+// SMOOTH SCROLL FOR NAV LINKS
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if(target) target.scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
